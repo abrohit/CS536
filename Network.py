@@ -29,6 +29,7 @@ class Network():
         """ 
         Randomly updates weights on existing edges
         """
+        # TODO: Maybe replace with iterating edges instead of only updating weight if edge exists
         for _ in range(self.num_flows):
             nodes = list(self.Graph.nodes())
             src, dst = random.sample(nodes, 2)  # Randomly choose two nodes
@@ -38,7 +39,7 @@ class Network():
 
             if self.Graph.has_edge(src, dst):
                 if 'weight' in self.Graph[src][dst]:
-                    self.Graph[src][dst]['weight'] += (increase_or_decrease * arrival_rate)  # Increment existing weight
+                    self.Graph[src][dst]['weight'] = abs(self.Graph[src][dst]['weight'] + (increase_or_decrease * arrival_rate))  # Increment existing weight
                 else:
                     self.Graph[src][dst]['weight'] = arrival_rate  # Initialize weight if not present
     
