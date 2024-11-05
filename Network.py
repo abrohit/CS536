@@ -6,34 +6,86 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 class Network():
-    def __init__(self, topology:int = 0, num_flows:int = 10, lambda_min:int = 10, lambda_max:int = 300):
+    def __init__(self, topology:int = 0, service_rate:int = 3000, system_capacity:int = 10000):
         """
         topology= 0, 1, 2
         """
         self.topology = topology
-        self.num_flows = num_flows
+        self.t = 0 # Tracks t
 
-        self.lambda_min = lambda_min
-        self.lambda_max = lambda_max
-        
         match self.topology:
             case 0:
+                self.num_of_switches = 25 # N = number of switches
                 self.Graph = nx.grid_2d_graph(5, 5)
                 self.Graph = nx.convert_node_labels_to_integers(self.Graph) # Convert Nodes into integers
             case 1:
+                self.num_of_switches = 40 # N = number of switches
                 ...
             case 2:
+                self.num_of_switches = 19 # N = number of switches
                 ...
+        # TODO: Initialize for t=0, and populate at runtime.
+        self.M = 5 # Number of flows for a given time ; TODO: Needs a proper value and changes for every t.
+        self.f = np.zeros((self.M, ), dtype='i,i') # List of (src, dst) tuples of size self.M
+        self.lam = np.zeros(self.M, dtype=np.float64) # Aggregate arrival 
+
+        self.u = np.full(self.num_of_switches, service_rate) # Servivce rate of each switch ; Constant rate, for later work we can vary rates.
+        self.K = np.full(self.num_of_switches, system_capacity) # Total system capacity of each switch. ; Constant system capacity, for later work we can vary rates.
+        self.rho = self.lam / self.u # Traffic Intensity for each switch.
+        
+        self.e_n = self.get_queue_occupation() # Returns an array of expected queue occupation of each switch.  
+        self.P = self.get_P() # Returns a probability array(of packets getting lost) of size self.num_of_switches.
+        self.e_d = self.get_expected_delays() # Returns an expected delay for each switch.
+
+        self.d_k_e2e = self.get_end_end_delay() # Returns an array of size self.M(for each active flow at time t) ; self.d_k_e2e.mean() would be the e2e mean of the network.
+
+        self.e_l = self.get_expected_loss() # Returns an array of expected loss of size self.num_of_switches.
     
+    def shortest_path(self, src, dest):
+        """
+        Gets shortest path given src, dest in the graph.
+        """
+        ...
+    
+    def get_queue_occupation(self):
+        """
+        Gets queue occupation of each switch.
+        """
+        ...
+    
+    def get_P(self):
+        """
+        Gets probability array of packets getting lost of size self.num_of_switches.
+        """
+        return ( (1 - self.rho) * (self.rho ** self.K) ) / ( 1 - (self.rho ** (self.K + 1)) )
+    
+    def get_expected_delays(self):
+        """
+        Gets expected delay for each switch.
+        """
+        ...
+    
+    def get_end_end_delay(self):
+        """
+        Gets end to end delay for each flow in time self.t.
+        """
+        ...
+    
+    def get_expected_loss(self):
+        """
+        Gets expected loss for each switch.
+        """
+        ...
+    
+    # TODO: Needs configuring
     def update_weights(self):
         """ 
         Randomly updates weights on existing edges
         """
-        # TODO: Maybe replace with iterating edges instead of only updating weight if edge exists
-        for _ in range(self.num_flows):
+        for _ in range(self.M):
             nodes = list(self.Graph.nodes())
             src, dst = random.sample(nodes, 2)  # Randomly choose two nodes
-            arrival_rate = np.random.uniform(self.lambda_min, self.lambda_max)  # Random arrival rate
+            arrival_rate = np.random.uniform(0, 300)  # Random arrival rate with min 0 -> 300
 
             increase_or_decrease = random.sample([-1, 1], 1)[0] # Randomly choose to increase of decrease
 
@@ -60,6 +112,7 @@ class Network():
         plt.axis('off')
         plt.show()
 
+    # TODO: Needs configuring/Changing
     def run(self, interval:int = 1, is_plot:bool = False):
         """
         Main function to run the network updates and optionally plot the graph
@@ -92,5 +145,5 @@ class Network():
 
 if __name__ == '__main__':
     network = Network()
-    network.run(interval=1, is_plot=True)
+    # network.run(interval=1, is_plot=True)
     # network.plot_graph()
