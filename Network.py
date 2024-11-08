@@ -75,7 +75,7 @@ class Network():
         """
         Gets expected loss for each switch.
         """
-        ...
+        return self.lam * self.P
     
     # TODO: Needs configuring
     def update_weights(self):
