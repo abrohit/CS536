@@ -45,14 +45,20 @@ class Network():
         """
         Gets shortest path given src, dest in the graph.
         """
-        ...
+        return nx.shortest_path(G, source=src, target=dst, weight= lambda s,d,a: self.Graph[s][d]['weight'], method='dijkstra')
     
     def get_queue_occupation(self):
         """
         Gets queue occupation of each switch.
         """
-        ...
-    
+        N = np.zeros(len(self.rho))
+        for i in range(len(self.rho)):
+            if r[i] < 1:
+                N[i] = (r[i] / (1 - r[i])) - (((self.K[i] + 1) * (r ** (self.K[i] + 1))) / ((1 - r[i]) ** (self.K[i] + 1)))
+            if r[i] == 1:
+                N[i] = self.K[i] / 2
+        return N
+
     def get_P(self):
         """
         Gets probability array of packets getting lost of size self.num_of_switches.
@@ -63,13 +69,19 @@ class Network():
         """
         Gets expected delay for each switch.
         """
-        ...
+        return self.e_n / (self.lam * (1 - self.P))
     
     def get_end_end_delay(self):
         """
         Gets end to end delay for each flow in time self.t.
         """
-        ...
+        D = np.zeros(len(self.f))
+        for i in range(len(self.f)):
+            flow = self.f[i]
+            p_star = self.shortest_path(flow[0], flow[1])
+            for n in p_star:
+                D[i] += self.e_d[n]
+        return D
     
     def get_expected_loss(self):
         """
