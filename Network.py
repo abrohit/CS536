@@ -89,24 +89,21 @@ class Network():
         """
         return self.lam * self.P
     
-    # TODO: Needs configuring
-    def update_weights(self):
-        """ 
-        Randomly updates weights on existing edges
+    def update_weights(self, weights):
         """
-        for _ in range(self.M):
-            nodes = list(self.Graph.nodes())
-            src, dst = random.sample(nodes, 2)  # Randomly choose two nodes
-            arrival_rate = np.random.uniform(0, 300)  # Random arrival rate with min 0 -> 300
+        Updates the weights of existing edges using the provided array of weights.
 
-            increase_or_decrease = random.sample([-1, 1], 1)[0] # Randomly choose to increase of decrease
+        Args:
+            weights (list or np.array): An array of weights with a length equal to the number of edges.
+        """
+        # Check if the length of weights matches the number of edges
+        if len(weights) != len(self.Graph.edges):
+            raise ValueError("Length of weights array must match the number of edges in the graph.")
 
-            if self.Graph.has_edge(src, dst):
-                if 'weight' in self.Graph[src][dst]:
-                    self.Graph[src][dst]['weight'] = abs(self.Graph[src][dst]['weight'] + (increase_or_decrease * arrival_rate))  # Increment existing weight
-                else:
-                    self.Graph[src][dst]['weight'] = arrival_rate  # Initialize weight if not present
-    
+        # Iterate through the edges and update their weights
+        for (edge, weight) in zip(self.Graph.edges, weights):
+            self.Graph[edge[0]][edge[1]]['weight'] = weight
+
     def plot_graph(self):
         """
         Plot the graph with current weights
