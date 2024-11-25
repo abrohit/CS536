@@ -20,7 +20,7 @@ class Network():
                 self.Graph = nx.convert_node_labels_to_integers(self.Graph) # Convert Nodes into integers
             case 1:
                 self.num_of_switches = 40 # N = number of switches
-                self.Graph = nx.gnm_random_graph(self.num_of_switches, 60)
+                self.Graph = nx.gnm_random_graph(self.num_of_switches, 61)
                 while not nx.is_connected(self.Graph):
                     self.Graph = nx.gnm_random_graph(40, 60)
 
@@ -30,29 +30,41 @@ class Network():
                 plt.show()
             case 2:
                 self.num_of_switches = 19 # N = number of switches
-                self.Graph = nx.Graph()
+                self.Graph = nx.gnm_random_graph(self.num_of_switches, 33)
+                while not nx.is_connected(self.Graph):
+                    self.Graph = nx.gnm_random_graph(self.num_of_switches, 33)
 
-                for i in range(self.num_of_switches):
-                    self.Graph.add_node(i)
-                
-                backbone_nodes = list(range(5)) # 5 Backbone Nodes
-                regional_nodes = list(set(range(self.num_of_switches)) - set(backbone_nodes)) # Regional Nodes
+                # self.Graph = nx.Graph()
 
-                for i in range(len(backbone_nodes)):
-                    for j in range(i + 1, len(backbone_nodes)):
-                        self.Graph.add_edge(backbone_nodes[i], backbone_nodes[j])
+                # for i in range(self.num_of_switches):
+                #     self.Graph.add_node(i)
                 
-                for node in regional_nodes:
-                    self.Graph.add_edge(node, backbone_nodes[node % len(backbone_nodes)])
+                # backbone_nodes = list(range(5)) # 5 Backbone Nodes
+                # regional_nodes = list(set(range(self.num_of_switches)) - set(backbone_nodes)) # Regional Nodes
+
+                # for i in range(len(backbone_nodes)):
+                #     for j in range(i + 1, len(backbone_nodes)):
+                #         self.Graph.add_edge(backbone_nodes[i], backbone_nodes[j])
+                
+                # for node in regional_nodes:
+                #     self.Graph.add_edge(node, backbone_nodes[node % len(backbone_nodes)])
+
 
         # TODO: Initialize for t=0, and populate at runtime.
         self.M = 5 # Number of flows for a given time ; TODO: Needs a proper value and changes for every t.
-        self.f = np.zeros((self.M, ), dtype='i,i') # List of (src, dst) tuples of size self.M
-        self.lam = np.zeros(self.M, dtype=np.float64) # Aggregate arrival 
-
+        nodes = list(self.Graph.nodes)
+        self.f = np.array([(random.choice(nodes), random.choice(nodes)) for _ in range(self.M)], dtype='i,i') # List of (src, dst) tuples of size self.M
+        
+        self.lam = np.random.uniform(10, 300, self.M) # Aggregate arrival 
         self.u = np.full(self.num_of_switches, service_rate) # Servivce rate of each switch ; Constant rate, for later work we can vary rates.
         self.K = np.full(self.num_of_switches, system_capacity) # Total system capacity of each switch. ; Constant system capacity, for later work we can vary rates.
-        self.rho = self.lam / self.u # Traffic Intensity for each switch.
+
+        # Aggregate arrival rate per switch
+        switch_lam = np.zeros(self.num_of_switches) # Need to keep track of this for all switches.
+        for src, dst in self.f:
+            switch_lam[src] += random.choice(self.lam)  # Assign a flow's rate to the source switch
+
+        self.rho = switch_lam / self.u # Traffic Intensity for each switch.
         
         self.e_n = self.get_queue_occupation() # Returns an array of expected queue occupation of each switch.  
         self.P = self.get_P() # Returns a probability array(of packets getting lost) of size self.num_of_switches.
