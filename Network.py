@@ -20,10 +20,31 @@ class Network():
                 self.Graph = nx.convert_node_labels_to_integers(self.Graph) # Convert Nodes into integers
             case 1:
                 self.num_of_switches = 40 # N = number of switches
-                ...
+                self.Graph = nx.gnm_random_graph(self.num_of_switches, 60)
+                while not nx.is_connected(self.Graph):
+                    self.Graph = nx.gnm_random_graph(40, 60)
+
+                pos = nx.spring_layout(self.Graph, seed=42)
+                nx.draw(self.Graph, pos, with_labels=True, node_color='orange', node_size=500, font_size=8, font_color='black')
+                plt.title("InternetMCI Topology with 19 Switches")
+                plt.show()
             case 2:
                 self.num_of_switches = 19 # N = number of switches
-                ...
+                self.Graph = nx.Graph()
+
+                for i in range(self.num_of_switches):
+                    self.Graph.add_node(i)
+                
+                backbone_nodes = list(range(5)) # 5 Backbone Nodes
+                regional_nodes = list(set(range(self.num_of_switches)) - set(backbone_nodes)) # Regional Nodes
+
+                for i in range(len(backbone_nodes)):
+                    for j in range(i + 1, len(backbone_nodes)):
+                        self.Graph.add_edge(backbone_nodes[i], backbone_nodes[j])
+                
+                for node in regional_nodes:
+                    self.Graph.add_edge(node, backbone_nodes[node % len(backbone_nodes)])
+
         # TODO: Initialize for t=0, and populate at runtime.
         self.M = 5 # Number of flows for a given time ; TODO: Needs a proper value and changes for every t.
         self.f = np.zeros((self.M, ), dtype='i,i') # List of (src, dst) tuples of size self.M
