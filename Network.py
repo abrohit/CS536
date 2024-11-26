@@ -60,20 +60,20 @@ class Network():
         self.K = np.full(self.num_of_switches, system_capacity) # Total system capacity of each switch. ; Constant system capacity, for later work we can vary rates.
 
         # Aggregate arrival rate per switch
-        agg_lam = np.zeros(self.num_of_switches) # Need to keep track of this for all switches.
+        self.agg_lam = np.zeros(self.num_of_switches) # Need to keep track of this for all switches.
         for i in range(len(self.f)):
             src, dst = self.f[i]
-            agg_lam[dst] += self.lam[i]  # Aggregate flow into destination switch
+            self.agg_lam[dst] += self.lam[i]  # Aggregate flow into destination switch
 
-        self.rho = agg_lam / self.u # Traffic Intensity for each switch.
+        self.rho = self.agg_lam / self.u # Traffic Intensity for each switch.
         
         self.e_n = self.get_queue_occupation(self.rho, self.K) # Returns an array of expected queue occupation of each switch.  
         self.P = self.get_P(self.rho, self.K) # Returns a probability array(of packets getting lost) of size self.num_of_switches.
-        self.e_d = self.get_expected_delays(self.e_n, self.lam, self.P) # Returns an expected delay for each switch.
+        self.e_d = self.get_expected_delays(self.e_n, self.agg_lam, self.P) # Returns an expected delay for each switch.
 
         self.d_k_e2e = self.get_end_end_delay(self.f, self.e_d) # Returns an array of size self.M(for each active flow at time t) ; self.d_k_e2e.mean() would be the e2e mean of the network.
 
-        self.e_l = self.get_expected_loss(self.lam, self.P) # Returns an array of expected loss of size self.num_of_switches.
+        self.e_l = self.get_expected_loss(self.agg_lam, self.P) # Returns an array of expected loss of size self.num_of_switches.
     
     def shortest_path(self, src, dest):
         """
