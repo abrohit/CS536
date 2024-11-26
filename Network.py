@@ -89,8 +89,10 @@ class Network():
         """
         N = np.zeros(len(rho))
         for i in range(len(rho)):
-            if rho[i] < 1:
+            if rho[i] < 1 and rho[i] != 0:
                 N[i] = (rho[i] / (1 - rho[i])) - (((K[i] + 1) * (rho[i] ** (K[i] + 1))) / ((1 - rho[i]) ** (K[i] + 1)))
+                if np.isnan(N[i]): # Handles invalid value encountered in scalar divide warning.
+                    N[i] = rho[i] / (1 - rho[i])
             if rho[i] == 1:
                 N[i] = K[i] / 2
         return N
@@ -99,7 +101,11 @@ class Network():
         """
         Gets probability array of packets getting lost of size self.num_of_switches.
         """
-        return ( (1 - rho) * (rho ** K) ) / ( 1 - (rho ** (K + 1)) )
+        temp_p = ( (1 - rho) * (rho ** K) ) / ( 1 - (rho ** (K + 1)) )
+        for i in range(len(temp_p)):
+            if np.isnan(temp_p[i]): # Handles invalid value encountered in scalar divide warning.
+                    temp_p[i] = 0
+        return temp_p
     
     def get_expected_delays(self, e_n, lam, P):
         """
@@ -159,38 +165,11 @@ class Network():
         plt.axis('off')
         plt.show()
 
-    # TODO: Needs configuring/Changing
-    def run(self, interval:int = 1, is_plot:bool = False):
-        """
-        Main function to run the network updates and optionally plot the graph
-        """
-        if is_plot:
-            fig, ax = plt.subplots()
-            pos = nx.spring_layout(self.Graph)
-
-            def update(frame):
-                self.update_weights()
-                ax.clear()
-
-                nx.draw_networkx_nodes(self.Graph, pos, node_size=500, node_color='skyblue', ax=ax)
-                nx.draw_networkx_edges(self.Graph, pos, width=1.5, alpha=0.7, ax=ax)
-                
-                edge_labels = nx.get_edge_attributes(self.Graph, 'weight')
-                edge_labels = {edge: f"{weight:.2f}" for edge, weight in edge_labels.items()}  # Format weights
-                nx.draw_networkx_edge_labels(self.Graph, pos, edge_labels=edge_labels, label_pos=0.5, font_size=8, ax=ax)
-                
-                nx.draw_networkx_labels(self.Graph, pos, font_size=10, font_family="sans-serif", ax=ax)
-                ax.set_title(f"Network Topology {self.topology}")
-                ax.axis('off')
-            
-            ani = FuncAnimation(fig, update, interval=interval * 1000)
-            plt.show()
-        else:
-            while True:
-                self.update_weights()
-                time.sleep(interval)
-
 if __name__ == '__main__':
     network = Network()
+    num_of_edges = len(network.Graph.edges)
+    for i in range(5):
+        temp_W = np.random.uniform(low=1.0, high=5.0, size=num_of_edges)
+        network.update_weights(temp_W)
     # network.run(interval=1, is_plot=True)
     # network.plot_graph()
