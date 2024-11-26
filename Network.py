@@ -55,7 +55,7 @@ class Network():
         nodes = list(self.Graph.nodes)
         self.f = np.array([(random.choice(nodes), random.choice(nodes)) for _ in range(self.M)], dtype='i,i') # List of (src, dst) tuples of size self.M
         
-        self.lam = np.random.poisson(np.random.uniform(10, 300), self.M) #Poisson distributed arrival rates
+        self.lam = np.array([np.random.poisson(np.random.uniform(10, 300)) for i in range(self.M)]) #Poisson distributed arrival rates
         self.u = np.full(self.num_of_switches, service_rate) # Exponentially distributed service rates
         self.K = np.full(self.num_of_switches, system_capacity) # Total system capacity of each switch. ; Constant system capacity, for later work we can vary rates.
 
