@@ -55,72 +55,73 @@ class Network():
         nodes = list(self.Graph.nodes)
         self.f = np.array([(random.choice(nodes), random.choice(nodes)) for _ in range(self.M)], dtype='i,i') # List of (src, dst) tuples of size self.M
         
-        self.lam = np.random.uniform(10, 300, self.M) # Aggregate arrival 
-        self.u = np.full(self.num_of_switches, service_rate) # Servivce rate of each switch ; Constant rate, for later work we can vary rates.
+        self.lam = np.random.poisson(np.random.uniform(10, 300), self.M) #Poisson distributed arrival rates
+        self.u = np.full(self.num_of_switches, service_rate) # Exponentially distributed service rates
         self.K = np.full(self.num_of_switches, system_capacity) # Total system capacity of each switch. ; Constant system capacity, for later work we can vary rates.
 
         # Aggregate arrival rate per switch
-        switch_lam = np.zeros(self.num_of_switches) # Need to keep track of this for all switches.
-        for src, dst in self.f:
-            switch_lam[src] += random.choice(self.lam)  # Assign a flow's rate to the source switch
+        agg_lam = np.zeros(self.num_of_switches) # Need to keep track of this for all switches.
+        for i in range(len(self.f)):
+            src, dst = self.f[i]
+            agg_lam[dst] += self.lam[i]  # Aggregate flow into destination switch
 
-        self.rho = switch_lam / self.u # Traffic Intensity for each switch.
+        self.rho = agg_lam / self.u # Traffic Intensity for each switch.
         
-        self.e_n = self.get_queue_occupation() # Returns an array of expected queue occupation of each switch.  
-        self.P = self.get_P() # Returns a probability array(of packets getting lost) of size self.num_of_switches.
-        self.e_d = self.get_expected_delays() # Returns an expected delay for each switch.
+        self.e_n = self.get_queue_occupation(self.rho, self.K) # Returns an array of expected queue occupation of each switch.  
+        self.P = self.get_P(self.rho, self.K) # Returns a probability array(of packets getting lost) of size self.num_of_switches.
+        self.e_d = self.get_expected_delays(self.e_n, self.lam, self.P) # Returns an expected delay for each switch.
 
-        self.d_k_e2e = self.get_end_end_delay() # Returns an array of size self.M(for each active flow at time t) ; self.d_k_e2e.mean() would be the e2e mean of the network.
+        self.d_k_e2e = self.get_end_end_delay(self.f, self.e_d) # Returns an array of size self.M(for each active flow at time t) ; self.d_k_e2e.mean() would be the e2e mean of the network.
 
-        self.e_l = self.get_expected_loss() # Returns an array of expected loss of size self.num_of_switches.
+        self.e_l = self.get_expected_loss(self.lam, self.P) # Returns an array of expected loss of size self.num_of_switches.
     
     def shortest_path(self, src, dest):
         """
         Gets shortest path given src, dest in the graph.
         """
-        return nx.shortest_path(G, source=src, target=dst, weight= lambda s,d,a: self.Graph[s][d]['weight'], method='dijkstra')
+        return nx.shortest_path(self.Graph, source=src, target=dest, weight= lambda s,d,a: self.Graph[s][d]['weight'], method='dijkstra')
     
-    def get_queue_occupation(self):
+    def get_queue_occupation(self, rho, K):
         """
         Gets queue occupation of each switch.
         """
-        N = np.zeros(len(self.rho))
-        for i in range(len(self.rho)):
-            if r[i] < 1:
-                N[i] = (r[i] / (1 - r[i])) - (((self.K[i] + 1) * (r ** (self.K[i] + 1))) / ((1 - r[i]) ** (self.K[i] + 1)))
-            if r[i] == 1:
-                N[i] = self.K[i] / 2
+        N = np.zeros(len(rho))
+        for i in range(len(rho)):
+            if rho[i] < 1:
+                N[i] = (rho[i] / (1 - rho[i])) - (((K[i] + 1) * (rho[i] ** (K[i] + 1))) / ((1 - rho[i]) ** (K[i] + 1)))
+            if rho[i] == 1:
+                N[i] = K[i] / 2
         return N
 
-    def get_P(self):
+    def get_P(self, rho, K):
         """
         Gets probability array of packets getting lost of size self.num_of_switches.
         """
-        return ( (1 - self.rho) * (self.rho ** self.K) ) / ( 1 - (self.rho ** (self.K + 1)) )
+        return ( (1 - rho) * (rho ** K) ) / ( 1 - (rho ** (K + 1)) )
     
-    def get_expected_delays(self):
+    def get_expected_delays(self, e_n, lam, P):
         """
         Gets expected delay for each switch.
         """
-        return self.e_n / (self.lam * (1 - self.P))
+        return e_n / (lam * (1 - P))
     
-    def get_end_end_delay(self):
+    def get_end_end_delay(self, f, e_d):
         """
         Gets end to end delay for each flow in time self.t.
         """
-        D = np.zeros(len(self.f))
-        for i in range(len(self.f)):
-            flow = self.f[i]
+        D = np.zeros(len(f))
+        for i in range(len(f)):
+            flow = f[i]
             p_star = self.shortest_path(flow[0], flow[1])
             for n in p_star:
-                D[i] += self.e_d[n]
+                D[i] += e_d[n]
         return D
     
-    def get_expected_loss(self):
+    def get_expected_loss(self, lam, P):
         """
         Gets expected loss for each switch.
         """
-        return self.lam * self.P
+        return lam * P
     
     def update_weights(self, weights):
         """
