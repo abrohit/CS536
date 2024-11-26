@@ -49,6 +49,8 @@ class Network():
                 # for node in regional_nodes:
                 #     self.Graph.add_edge(node, backbone_nodes[node % len(backbone_nodes)])
 
+        for edge in self.Graph.edges:
+            self.Graph[edge[0]][edge[1]]['weight'] = np.random.uniform(1, 5)
 
         # TODO: Initialize for t=0, and populate at runtime.
         self.M = 5 # Number of flows for a given time ; TODO: Needs a proper value and changes for every t.
@@ -103,7 +105,9 @@ class Network():
         """
         Gets expected delay for each switch.
         """
-        return e_n / (lam * (1 - P))
+        denominator = (lam * (1 - P))
+        mask = np.where(denominator == 0, 1, denominator)
+        return e_n / mask
     
     def get_end_end_delay(self, f, e_d):
         """
