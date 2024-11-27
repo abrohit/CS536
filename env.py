@@ -1,22 +1,24 @@
 import gymnasium as gym
 import numpy as np
-
+from Network import Network
+import networkx as nx
 
 class NetworkEnv(gym.Env):
 
     def __init__(self, num_switches, num_links, num_flows, alpha, w_min, w_max, episode_length):
         self.network = Network()
         self.episode_length = episode_length
+        self.alpha = alpha
 
         self.observation_space = gym.spaces.Dict(
                 {
-                    "time":,
-                    "system_capacity":,
-                    "queue_occupation":,
-                    "arrival_rate":,
-                    "loss_traffic":,
-                    "utilization":,
-                    "delay":
+                    "time": gym.spaces.Box(low=0, high=episode_length, shape=(1), dtype=np.uint8),
+                    "system_capacity": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(num_switches, 1), dtype=np.float32),
+                    "queue_occupation": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(num_switches, 1), dtype=np.float32),
+                    "arrival_rate": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(num_switches, 1), dtype=np.float32),
+                    "loss_traffic": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(num_switches, 1), dtype=np.float32),
+                    "utilization": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(num_switches, 1), dtype=np.float32),
+                    "delay": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(num_switches, 1), dtype=np.float32)
                 }
         )
 
@@ -25,10 +27,15 @@ class NetworkEnv(gym.Env):
     
 
     def _get_obs(self):
-        state = self.network.get_state()
-        #TODO: translate state values to observation space dict
-
-        # Assuming getting timestep from this function returning with observation
+        state = {
+                "time": self.network.t,
+                "system_capacity": self.network.K,
+                "queue_occupation": self.network.e_n,
+                "arrival_rate": self.network.agg_lam,
+                "loss_traffic": self.network.e_l,
+                "utilization": self.network.rho,
+                "delay": self.network.e_d
+        }
         return state
 
 
@@ -37,16 +44,17 @@ class NetworkEnv(gym.Env):
 
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
-        super().reset(seed=seed)
+        #super().reset(seed=seed)
 
-        self.network.reset()
+        #self.network.reset()
+        self.network = Network()
 
         obs, _ = self._get_obs()
         info = self._get_info()
 
 
     def step(self, actions):
-        self.network.update(actions)
+        self.network.update_weights(actions)
         observation = self._get_obs()
         info = self._get_info()
 
@@ -56,14 +64,22 @@ class NetworkEnv(gym.Env):
             terminated = False
 
         truncated = False
-        reward = self._calc_reward()
+        reward = self._calc_reward(observation)
 
         return observation, reward, terminated, truncated, info
 
 
-    def _calc_reward(self):
-        #TODO
-        pass
+    def _calc_reward(self, observation):
+        longest_path = nx.dag_longest_path(self.network.Graph)
+        rd_denom = 0
+        for n in longest_path:
+            rd_denom += observation["system_capacity"][n] / self.network.u[n]
+        rd = 1 - (self.network.d_k_e2e.mean() / rd_denom)
+
+        rp = 1 - (np.sum(observation["loss_traffic"])/np.sum(observation["arrival_rate"]))
+
+        reward = self.alpha * rd + (1 - self.alpha) * rp
+        return reward
         
 
 
