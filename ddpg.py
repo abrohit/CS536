@@ -35,7 +35,7 @@ class Critic(nn.Module):
 
 # DDPG Agent
 class DDPGAgent:
-    def __init__(self, state_dim, action_dim, hidden_dim, actor_lr, critic_lr, gamma, tau, buffer_size):
+    def __init__(self, state_dim, action_dim, hidden_dim, actor_lr, critic_lr, gamma, tau, buffer_size, w_min, w_max):
         self.actor = Actor(state_dim, action_dim, hidden_dim)
         self.actor_target = Actor(state_dim, action_dim, hidden_dim)
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=actor_lr)
@@ -52,22 +52,20 @@ class DDPGAgent:
         self.actor_target.load_state_dict(self.actor.state_dict())
         self.critic_target.load_state_dict(self.critic.state_dict())
 
+        self.w_min = w_min
+        self.w_max = w_max
+
     def select_action(self, state, noise=0.1):
         new_state = list()
         for key, value in state.items():
-            if type(value) is int:
-                print("key, value", key, value)
-                continue
-            print("THIS IS THE VALUE", len(value))
             new_state.append(value)
-        print("THIS S WHAT THE STATRELOOKS LIKE", state)
         new_state = np.concatenate(new_state)
 
         state = torch.FloatTensor(new_state).unsqueeze(0)
         action = self.actor(state).squeeze(0).detach().numpy()
         # action = action.numpy()
         action += np.random.normal(0, noise, size=action.shape)
-        return np.clip(action, -1, 1)
+        return np.clip(action, self.w_min, self.w_max)
     
     def store_transition(self, state, action, reward, next_state, done):
         self.replay_buffer.append((state, action, reward, next_state, done))
@@ -112,7 +110,7 @@ class DDPGAgent:
             target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
 
 # Training loop
-def train_ddpg(env, agent, num_episodes, max_steps, batch_size):
+def train_ddpg(env, agent, num_episodes, max_steps, batch_size, topology):
     for episode in range(num_episodes):
         state, _ = env.reset()
         episode_reward = 0
@@ -131,20 +129,22 @@ def train_ddpg(env, agent, num_episodes, max_steps, batch_size):
                 break
 
         print(f"Episode {episode + 1}, Reward: {episode_reward}")
+        with open("topology_" + str(topology) + "_train.txt", "a") as f:
+            f.write(f"Episode {episode + 1}, Reward: {episode_reward}\n")
+        if episode % 25 == 0:
+            torch.save(agent, "models/agent_" + str(episode) + "topology_" + str(topology) + ".pt")
 
 # Main execution
 if __name__ == "__main__":
     # Environment parameters
-    num_switches = 25
-    num_links = 40
-    num_flows = 5
+    topology = 0
     alpha = 0.5
     w_min = 1
     w_max = 10
     episode_length = 1000
 
     # Create environment
-    env = NetworkEnv(num_switches, num_links, num_flows, alpha, w_min, w_max, episode_length)
+    env = NetworkEnv(topology, alpha, w_min, w_max, episode_length)
 
     # DDPG parameters
     state_dim = sum([space.shape[0] for space in env.observation_space.values()])
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     buffer_size = 100000
 
     # Create DDPG agent
-    agent = DDPGAgent(state_dim, action_dim, hidden_dim, actor_lr, critic_lr, gamma, tau, buffer_size)
+    agent = DDPGAgent(state_dim, action_dim, hidden_dim, actor_lr, critic_lr, gamma, tau, buffer_size, w_min, w_max)
 
     # Training parameters
     num_episodes = 1000
@@ -165,4 +165,4 @@ if __name__ == "__main__":
     batch_size = 64
 
     # Start training
-    train_ddpg(env, agent, num_episodes, max_steps, batch_size)
+    train_ddpg(env, agent, num_episodes, max_steps, batch_size, topology)

@@ -6,26 +6,26 @@ import networkx as nx
 
 class NetworkEnv(gym.Env):
 
-    def __init__(self, num_switches, num_links, num_flows, alpha, w_min, w_max, episode_length):
-        self.network = Network()
+    def __init__(self, topology, alpha, w_min, w_max, episode_length):
+        self.network = Network(topology)
         self.episode_length = episode_length
         self.alpha = alpha
-        self.num_switches = num_switches
+        self.num_switches = self.network.num_of_switches
 
         self.observation_space = gym.spaces.Dict(
                 {
-                    "time": gym.spaces.Box(low=0, high=episode_length, shape=(num_switches, 1), dtype=np.float32),
-                    "system_capacity": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(num_switches, 1), dtype=np.float32),
-                    "queue_occupation": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(num_switches, 1), dtype=np.float32),
-                    "arrival_rate": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(num_switches, 1), dtype=np.float32),
-                    "loss_traffic": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(num_switches, 1), dtype=np.float32),
-                    "utilization": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(num_switches, 1), dtype=np.float32),
-                    "delay": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(num_switches, 1), dtype=np.float32)
+                    "time": gym.spaces.Box(low=0, high=episode_length, shape=(self.num_switches, 1), dtype=np.float32),
+                    "system_capacity": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_switches, 1), dtype=np.float32),
+                    "queue_occupation": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_switches, 1), dtype=np.float32),
+                    "arrival_rate": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_switches, 1), dtype=np.float32),
+                    "loss_traffic": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_switches, 1), dtype=np.float32),
+                    "utilization": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_switches, 1), dtype=np.float32),
+                    "delay": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self.num_switches, 1), dtype=np.float32)
                 }
         )
 
-        self.action_space = gym.spaces.Box(low=w_min, high=w_max, shape=(num_links,1), dtype=np.float32)
-
+        self.action_space = gym.spaces.Box(low=w_min, high=w_max, shape=(len(self.network.Graph.edges),1), dtype=np.float32)
+        self.longest_path = self.longest_path_undirected(self.network.Graph)
 
 
     def _get_obs(self):
@@ -74,9 +74,10 @@ class NetworkEnv(gym.Env):
 
 
     def _calc_reward(self, observation):
-        longest_path = nx.dag_longest_path(self.network.Graph)
+        #longest_path = nx.dag_longest_path(self.network.Graph)
+        #longest_path = self.longest_path_undirected(self.network.Graph)
         rd_denom = 0
-        for n in longest_path:
+        for n in self.longest_path:
             rd_denom += observation["system_capacity"][n] / self.network.u[n]
         rd = 1 - (self.network.d_k_e2e.mean() / rd_denom)
 
@@ -85,3 +86,13 @@ class NetworkEnv(gym.Env):
         reward = self.alpha * rd + (1 - self.alpha) * rp
         return reward
 
+
+    def longest_path_undirected(self, G):
+        longest_path = []
+        for start in G.nodes():
+            for end in G.nodes():
+                if start != end:
+                    paths = list(nx.all_simple_paths(G, start, end))
+                    if paths:
+                        longest_path = max(longest_path, max(paths, key=len), key=len)
+        return longest_path
