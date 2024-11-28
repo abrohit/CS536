@@ -56,12 +56,7 @@ class DDPGAgent:
         self.w_max = w_max
 
     def select_action(self, state, noise=0.1):
-        new_state = list()
-        for key, value in state.items():
-            new_state.append(value)
-        new_state = np.concatenate(new_state)
-
-        state = torch.FloatTensor(new_state).unsqueeze(0)
+        state = torch.FloatTensor(state).unsqueeze(0)
         action = self.actor(state).squeeze(0).detach().numpy()
         # action = action.numpy()
         action += np.random.normal(0, noise, size=action.shape)
@@ -113,11 +108,20 @@ class DDPGAgent:
 def train_ddpg(env, agent, num_episodes, max_steps, batch_size, topology):
     for episode in range(num_episodes):
         state, _ = env.reset()
+        new_state = list()
+        for key, value in state.items():
+            new_state.append(value)
+        state = np.concatenate(new_state)
         episode_reward = 0
 
         for step in range(max_steps):
             action = agent.select_action(state)
             next_state, reward, done, _, _ = env.step(action)
+            new_next_state = list()
+            for key, value in next_state.items():
+                new_next_state.append(value)
+
+            next_state = np.concatenate(new_next_state)
 
             agent.store_transition(state, action, reward, next_state, done)
             agent.train(batch_size)
