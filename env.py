@@ -7,6 +7,7 @@ import networkx as nx
 class NetworkEnv(gym.Env):
 
     def __init__(self, topology, alpha, w_min, w_max, episode_length):
+        self.topology = topology
         self.network = Network(topology)
         self.episode_length = episode_length
         self.alpha = alpha
@@ -49,7 +50,7 @@ class NetworkEnv(gym.Env):
         #super().reset(seed=seed)
 
         #self.network.reset()
-        self.network = Network()
+        self.network = Network(self.topology)
 
         obs = self._get_obs()
         info = self._get_info()
@@ -76,12 +77,26 @@ class NetworkEnv(gym.Env):
     def _calc_reward(self, observation):
         #longest_path = nx.dag_longest_path(self.network.Graph)
         #longest_path = self.longest_path_undirected(self.network.Graph)
+        #print(observation)
+        #print(observation["loss_traffic"])
+        #print("CALCULARED VALUES")
+        #print(self.network.e_d)
+        #print(self.network.d_k_e2e)
         rd_denom = 0
+        #print("REWARD BREAKDOWN: RD")
         for n in self.longest_path:
             rd_denom += observation["system_capacity"][n] / self.network.u[n]
+            #print(rd_denom)
+
+        #print("REWARD BREAKDOWN: RD NUMERATOR")
+        #print(self.network.d_k_e2e.mean())
         rd = 1 - (self.network.d_k_e2e.mean() / rd_denom)
 
         rp = 1 - (np.sum(observation["loss_traffic"])/np.sum(observation["arrival_rate"]))
+
+        #print("REWARD BREAKDOWN FINAL")
+        #print(rd)
+        #print(rp)
 
         reward = self.alpha * rd + (1 - self.alpha) * rp
         return reward

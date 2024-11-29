@@ -116,7 +116,9 @@ def train_ddpg(env, agent, num_episodes, max_steps, batch_size, topology):
 
         for step in range(max_steps):
             action = agent.select_action(state)
-            next_state, reward, done, _, _ = env.step(action)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
+            #print("DONE STATUS: " + done)
             new_next_state = list()
             for key, value in next_state.items():
                 new_next_state.append(value)
@@ -129,23 +131,29 @@ def train_ddpg(env, agent, num_episodes, max_steps, batch_size, topology):
             state = next_state
             episode_reward += reward
 
+            avg_delays = env.network.e_d.mean()
+            avg_end_to_end_delay = env.network.d_k_e2e.mean()
+            avg_loss = env.network.e_l.mean()
+            # avg_throughput
+
             if done:
                 break
 
-        print(f"Episode {episode + 1}, Reward: {episode_reward}")
-        with open("topology_" + str(topology) + "_train.txt", "a") as f:
-            f.write(f"Episode {episode + 1}, Reward: {episode_reward}\n")
-        if episode % 25 == 0:
-            torch.save(agent, "models/agent_" + str(episode) + "topology_" + str(topology) + ".pt")
+            print(f"Step {step}, Reward: {reward}")
+            with open("topology_" + str(topology) + "_report.txt", "a") as f:
+                f.write(f"Step {step}, Reward: {reward}, Avg Delay: {avg_delays}, Avg E2E Delay: {avg_end_to_end_delay}, Avg Loss: {avg_loss}\n")
+
+            if episode % 1000 == 0:
+                torch.save(agent, "models/agent_" + str(episode) + "topology_" + str(topology) + ".pt")
 
 # Main execution
 if __name__ == "__main__":
     # Environment parameters
     topology = 0
-    alpha = 0.5
+    alpha = 0.9
     w_min = 1
-    w_max = 10
-    episode_length = 1000
+    w_max = 5
+    episode_length = 150000
 
     # Create environment
     env = NetworkEnv(topology, alpha, w_min, w_max, episode_length)
@@ -154,19 +162,19 @@ if __name__ == "__main__":
     state_dim = sum([space.shape[0] for space in env.observation_space.values()])
     action_dim = env.action_space.shape[0]
     hidden_dim = 256
-    actor_lr = 1e-4
-    critic_lr = 1e-3
+    actor_lr = 1e-5
+    critic_lr = 1e-5
     gamma = 0.99
     tau = 0.001
-    buffer_size = 100000
+    buffer_size = 50000
 
     # Create DDPG agent
     agent = DDPGAgent(state_dim, action_dim, hidden_dim, actor_lr, critic_lr, gamma, tau, buffer_size, w_min, w_max)
 
     # Training parameters
-    num_episodes = 1000
+    num_episodes = 1
     max_steps = episode_length
-    batch_size = 64
+    batch_size = 100
 
     # Start training
     train_ddpg(env, agent, num_episodes, max_steps, batch_size, topology)

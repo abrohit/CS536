@@ -7,7 +7,7 @@ from matplotlib.animation import FuncAnimation
 
 
 class Network():
-    def __init__(self, topology: int = 0, service_rate: int = 3000, system_capacity: int = 10000):
+    def __init__(self, topology: int = 0, global_service_rate: int = 3000, global_system_capacity: int = 10000):
         """
         topology= 0, 1, 2
         """
@@ -15,6 +15,7 @@ class Network():
         self.t = 0  # Tracks t
 
         match self.topology:
+        
             case 0:
                 self.num_of_switches = 25  # N = number of switches
                 self.Graph = nx.grid_2d_graph(5, 5)
@@ -54,6 +55,9 @@ class Network():
         for edge in self.Graph.edges:
             self.Graph[edge[0]][edge[1]]['weight'] = np.random.uniform(1, 5)
 
+        system_capacity = global_system_capacity // self.num_of_switches
+        service_rate = global_service_rate // self.num_of_switches
+
         # TODO: Initialize for t=0, and populate at runtime.
         self.M = 5  # Number of flows for a given time ; TODO: Needs a proper value and changes for every t.
         nodes = list(self.Graph.nodes)
@@ -76,8 +80,8 @@ class Network():
 
         self.e_n = self.get_queue_occupation(self.rho,
                                              self.K)  # Returns an array of expected queue occupation of each switch.
-        self.P = self.get_P(self.rho,
-                            self.K)  # Returns a probability array(of packets getting lost) of size self.num_of_switches.
+        self.P = self.get_P(self.rho, 
+                self.K)  # Returns a probability array(of packets getting lost) of size self.num_of_switches.
         self.e_d = self.get_expected_delays(self.e_n, self.agg_lam,
                                             self.P)  # Returns an expected delay for each switch.
 
@@ -98,14 +102,36 @@ class Network():
         """
         Gets queue occupation of each switch.
         """
+        print("\n\nQUEUE CALC")
         N = np.zeros(len(rho))
         for i in range(len(rho)):
             if rho[i] < 1 and rho[i] != 0:
-                N[i] = (rho[i] / (1 - rho[i])) - (((K[i] + 1) * (rho[i] ** (K[i] + 1))) / ((1 - rho[i]) ** (K[i] + 1)))
+                #print("RHO")
+                #print(rho[i])
+                #print("FIRST TERM")
+                #print((rho[i] / (1 - rho[i])))
+                #print("MINUS")
+                #print("SECOND TERM NUMERATOR")
+                #print(((K[i] + 1) * (rho[i] ** (K[i] + 1))))
+                #print("SECOND TERM DENOMINATOR")
+                #print(((1 - rho[i]) ** (K[i] + 1)))
+
+                N[i] = (rho[i] / (1 - rho[i])) - (((K[i] + 1) * (rho[i] ** (K[i] + 1))) / (1 - (rho[i] ** (K[i] + 1))))
+                #N[i] = (rho[i] / (1 - rho[i])) - (((K[i] + 1) * (rho[i] ** (K[i] + 1))) / ((1 - rho[i]) ** (K[i] + 1)))
                 if np.isnan(N[i]):  # Handles invalid value encountered in scalar divide warning.
                     N[i] = rho[i] / (1 - rho[i])
+                    #print("ISNAN")
+                    #print("NUM")
+                    #print(rho[i])
+                    #print("DENOM")
+                    #print(1 - rho[i])
+                if N[i] > K[i] / 2: # If queue occupation exceeds queue size, cap to queue size
+                    print("QUEUE LIMIT REACHED")
+                    N[i] = K[i] / 2
             if rho[i] == 1:
                 N[i] = K[i] / 2
+                #print("RHO[i] = 1")
+                #print(K[i] / 2)
         return N
 
     def get_P(self, rho, K):
