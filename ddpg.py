@@ -143,8 +143,10 @@ def train_ddpg(env, agent, num_episodes, max_steps, batch_size, topology):
             with open("topology_" + str(topology) + "_report.txt", "a") as f:
                 f.write(f"Step {step}, Reward: {reward}, Avg Delay: {avg_delays}, Avg E2E Delay: {avg_end_to_end_delay}, Avg Loss: {avg_loss}\n")
 
-            if step % 10000 == 0:
-                torch.save(agent, "models/agent_" + str(step) + "topology_" + str(topology) + ".pt")
+            #if  % 10000 == 0:
+            #    torch.save(agent, "models/agent_" + str(step) + "topology_" + str(topology) + ".pt")
+
+        torch.save(agent, "models/agent_" + str(episode) + "_topology_" + str(topology) + ".pt")
 
 # Main execution
 if __name__ == "__main__":
@@ -153,7 +155,7 @@ if __name__ == "__main__":
     alpha = 0.9
     w_min = 1
     w_max = 5
-    episode_length = 150000
+    episode_length = 200000
 
     # Create environment
     env = NetworkEnv(topology, alpha, w_min, w_max, episode_length)
@@ -172,7 +174,7 @@ if __name__ == "__main__":
     agent = DDPGAgent(state_dim, action_dim, hidden_dim, actor_lr, critic_lr, gamma, tau, buffer_size, w_min, w_max)
 
     # Training parameters
-    num_episodes = 1
+    num_episodes = 10
     max_steps = episode_length
     batch_size = 100
 
