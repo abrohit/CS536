@@ -100,7 +100,7 @@ class DDPGAgent:
         # Update target networks
         for target_param, param in zip(self.actor_target.parameters(), self.actor.parameters()):
             target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
-        
+        +
         for target_param, param in zip(self.critic_target.parameters(), self.critic.parameters()):
             target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
 
@@ -143,8 +143,8 @@ def train_ddpg(env, agent, num_episodes, max_steps, batch_size, topology):
             with open("topology_" + str(topology) + "_report.txt", "a") as f:
                 f.write(f"Step {step}, Reward: {reward}, Avg Delay: {avg_delays}, Avg E2E Delay: {avg_end_to_end_delay}, Avg Loss: {avg_loss}\n")
 
-            if episode % 1000 == 0:
-                torch.save(agent, "models/agent_" + str(episode) + "topology_" + str(topology) + ".pt")
+            if step % 10000 == 0:
+                torch.save(agent, "models/agent_" + str(step) + "topology_" + str(topology) + ".pt")
 
 # Main execution
 if __name__ == "__main__":
