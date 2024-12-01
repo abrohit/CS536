@@ -25,12 +25,6 @@ class Network():
                 self.Graph = nx.gnm_random_graph(self.num_of_switches, 61)
                 while not nx.is_connected(self.Graph):
                     self.Graph = nx.gnm_random_graph(40, 60)
-
-                pos = nx.spring_layout(self.Graph, seed=42)
-                nx.draw(self.Graph, pos, with_labels=True, node_color='orange', node_size=500, font_size=8,
-                        font_color='black')
-                plt.title("InternetMCI Topology with 19 Switches")
-                plt.show()
             case 2:
                 self.num_of_switches = 19  # N = number of switches
                 self.Graph = nx.gnm_random_graph(self.num_of_switches, 33)
@@ -90,8 +84,7 @@ class Network():
         service_rate = global_service_rate // self.num_of_switches
 
         # TODO: Initialize for t=0, and populate at runtime.
-        self.M = 5  # Number of flows for a given time ; TODO: Needs a proper value and changes for every t.
-
+        self.M = 10  # Number of flows for a given time ; TODO: Needs a proper value and changes for every t.
         if self.topology == 3:
             edge_switches = list(range(12, 20))
             core_switches = list(range(4))
@@ -129,6 +122,31 @@ class Network():
 
         self.e_l = self.get_expected_loss(self.agg_lam,
                                           self.P)  # Returns an array of expected loss of size self.num_of_switches.
+
+        self.fig, self.ax = None, None
+    
+    def show_network(self):
+        match self.topology:
+            case 0:
+                self.pos = self.get_custom_grid_coordinates(5, 5)
+            case 1:
+                self.pos = nx.spring_layout(self.Graph, seed=42)
+            case 2:
+                self.pos = nx.spring_layout(self.Graph, seed=42)
+            case 3:
+                self.pos = nx.spring_layout(self.Graph, seed=42)
+        
+        plt.ion()
+        self.fig, self.ax = plt.subplots(figsize=(10, 6))
+        self.plot_graph()
+    
+    def get_custom_grid_coordinates(self, rows, cols):
+        positions = {}
+        for i in range(rows):
+            for j in range(cols):
+                node_id = i * cols + j
+                positions[node_id] = (j, -i)  # (x, y), flip y for top-to-bottom ordering
+        return positions
 
     def shortest_path(self, src, dest):
         """
@@ -217,7 +235,6 @@ class Network():
         Args:
             weights (list or np.array): An array of weights with a length equal to the number of edges.
         """
-
         if len(weights) != len(self.Graph.edges):
             raise ValueError("Length of weights array must match the number of edges in the graph.")
 
@@ -254,30 +271,47 @@ class Network():
         self.e_l = self.get_expected_loss(self.agg_lam, self.P)  # expected losses
         self.t += 1 # time step
 
+        if self.fig:
+            self.plot_graph()
+
     def plot_graph(self):
         """
-        Plot the graph with current weights
+        Plot the graph with current weights on the given axis
+        Plot the graph with current weights on the given axis
         """
-        pos = nx.spring_layout(self.Graph)
-        nx.draw_networkx_nodes(self.Graph, pos, node_size=500, node_color='skyblue')
+        self.ax.clear()
+        nx.draw_networkx_nodes(self.Graph, self.pos, ax=self.ax, node_size=500, node_color='skyblue')
+        self.ax.clear()
+        nx.draw_networkx_nodes(self.Graph, self.pos, ax=self.ax, node_size=500, node_color='skyblue')
 
-        nx.draw_networkx_edges(self.Graph, pos, width=1.5, alpha=0.7)  # Draw edges
-        edge_labels = nx.get_edge_attributes(self.Graph, 'weight')  # Get edge weights
-        nx.draw_networkx_edge_labels(self.Graph, pos, edge_labels=edge_labels, label_pos=0.5,
-                                     font_size=8)  # Draw edge weights
+        nx.draw_networkx_edges(self.Graph, self.pos, ax=self.ax, width=1.5, alpha=0.7)
+        edge_labels = nx.get_edge_attributes(self.Graph, 'weight')
+        nx.draw_networkx_edge_labels(self.Graph, self.pos, edge_labels=edge_labels, ax=self.ax, label_pos=0.5, font_size=8)
+        nx.draw_networkx_edges(self.Graph, self.pos, ax=self.ax, width=1.5, alpha=0.7)
+        edge_labels = nx.get_edge_attributes(self.Graph, 'weight')
+        nx.draw_networkx_edge_labels(self.Graph, self.pos, edge_labels=edge_labels, ax=self.ax, label_pos=0.5, font_size=8)
 
-        nx.draw_networkx_labels(self.Graph, pos, font_size=10, font_family="sans-serif")  # Draw node labels
+        nx.draw_networkx_labels(self.Graph, self.pos, ax=self.ax, font_size=10, font_family="sans-serif")
+        self.ax.set_title(f"Network Topology {self.topology}")
+        self.ax.axis('off')
 
-        plt.title(f"Network Topology {self.topology}")
-        plt.axis('off')
-        plt.show()
+        # Redraw the plot
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
+        nx.draw_networkx_labels(self.Graph, self.pos, ax=self.ax, font_size=10, font_family="sans-serif")
+        self.ax.set_title(f"Network Topology {self.topology}")
+        self.ax.axis('off')
+
+        # Redraw the plot
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
 
 
 if __name__ == '__main__':
     network = Network(topology=3)
+    network.show_network()
     num_of_edges = len(network.Graph.edges)
     for i in range(1000):
         temp_W = np.random.uniform(low=1.0, high=5.0, size=num_of_edges)
         network.update_weights(temp_W)
-    # network.run(interval=1, is_plot=True)
-    network.plot_graph()
+        print(f"Iteration Number: {i}")
