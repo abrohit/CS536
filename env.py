@@ -27,9 +27,6 @@ class NetworkEnv(gym.Env):
         )
 
         self.action_space = gym.spaces.Box(low=w_min, high=w_max, shape=(len(self.network.Graph.edges),1), dtype=np.float32)
-        print("stRTS the longest path")
-        self.longest_path = self.longest_path_undirected(self.network.Graph)
-        print("ends lognest path")
 
 
     def _get_obs(self):
@@ -78,16 +75,17 @@ class NetworkEnv(gym.Env):
 
 
     def _calc_reward(self, observation):
-        #longest_path = nx.dag_longest_path(self.network.Graph)
-        #longest_path = self.longest_path_undirected(self.network.Graph)
-        #print(observation)
-        #print(observation["loss_traffic"])
-        #print("CALCULARED VALUES")
-        #print(self.network.e_d)
-        #print(self.network.d_k_e2e)
         rd_denom = 0
-        #print("REWARD BREAKDOWN: RD")
-        for n in self.longest_path:
+       
+        longest_path = []
+        for flow in self.network.f:
+            path = self.network.shortest_path(flow[0], flow[1])
+            if len(path) > len(longest_path):
+                longest_path = path
+        print("LONGEST PATH LEN: " + str(len(longest_path)))
+    
+
+        for n in longest_path:
             rd_denom += observation["system_capacity"][n] / self.network.u[n]
             #print(rd_denom)
 
@@ -104,13 +102,3 @@ class NetworkEnv(gym.Env):
         reward = self.alpha * rd + (1 - self.alpha) * rp
         return reward
 
-
-    def longest_path_undirected(self, G):
-        longest_path = []
-        for start in G.nodes():
-            for end in G.nodes():
-                if start != end:
-                    paths = list(nx.all_simple_paths(G, start, end))
-                    if paths:
-                        longest_path = max(longest_path, max(paths, key=len), key=len)
-        return longest_path
