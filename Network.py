@@ -51,6 +51,37 @@ class Network():
 
                 # for node in regional_nodes:
                 #     self.Graph.add_edge(node, backbone_nodes[node % len(backbone_nodes)])
+            case 3:
+                self.num_of_switches = 20
+                self.Graph = nx.Graph()
+
+                core_switches = range(4)
+                aggregation_switches = range(4, 12)
+                edge_switches = range(12, 20)
+
+                core_to_aggregation = {
+                    0: [4, 6, 8, 10],
+                    1: [4, 6, 8, 10],
+                    2: [5, 7, 9, 11],
+                    3: [5, 7, 9, 11]
+                }
+                for core, aggs in core_to_aggregation.items():
+                    for agg in aggs:
+                        self.Graph.add_edge(core, agg)
+
+                aggregation_to_edge = {
+                    4: [12, 13],
+                    5: [12, 13],
+                    6: [14, 15],
+                    7: [14, 15],
+                    8: [16, 17],
+                    9: [16, 17],
+                    10: [18, 19],
+                    11: [18, 19]
+                }
+                for agg, edges in aggregation_to_edge.items():
+                    for edge in edges:
+                        self.Graph.add_edge(agg, edge)
 
         for edge in self.Graph.edges:
             self.Graph[edge[0]][edge[1]]['weight'] = np.random.uniform(1, 5)
@@ -60,12 +91,20 @@ class Network():
 
         # TODO: Initialize for t=0, and populate at runtime.
         self.M = 5  # Number of flows for a given time ; TODO: Needs a proper value and changes for every t.
-        nodes = list(self.Graph.nodes)
-        self.f = np.array([(random.choice(nodes), random.choice(nodes)) for _ in range(self.M)],
-                          dtype='i,i')  # List of (src, dst) tuples of size self.M
 
+        if self.topology == 3:
+            edge_switches = list(range(12, 20))
+            core_switches = list(range(4))
+            self.f = np.array([(random.choice(edge_switches), random.choice(core_switches)) for _ in range(self.M)],
+                            dtype='i,i')  # List of (src, dst) tuples of size self.M
+        else:
+            nodes = list(self.Graph.nodes)
+            self.f = np.array([(random.choice(nodes), random.choice(nodes)) for _ in range(self.M)],
+                            dtype='i,i')  # List of (src, dst) tuples of size self.M
+        
         self.lam = np.array(
             [np.random.poisson(np.random.uniform(10, 300)) for i in range(self.M)])  # Poisson distributed arrival rates
+        
         self.u = np.full(self.num_of_switches, service_rate)  # Exponentially distributed service rates
         self.K = np.full(self.num_of_switches,
                          system_capacity)  # Total system capacity of each switch. ; Constant system capacity, for later work we can vary rates.
@@ -188,7 +227,13 @@ class Network():
 
         # Update lambdas for random flows
         for i in range(self.M):
-            src, dst = random.choice(list(self.Graph.nodes)), random.choice(list(self.Graph.nodes))
+            if self.topology == 3:
+                if self.t % 2 == 0: # Alternate core to edge and vice versa.
+                    src, dst = random.choice(range(12, 20)), random.choice(range(4))
+                else:
+                    src, dst = random.choice(range(4)), random.choice(range(12, 20))
+            else:
+                src, dst = random.choice(list(self.Graph.nodes)), random.choice(list(self.Graph.nodes))
             while src == dst:
                 dst = random.choice(list(self.Graph.nodes))
 
@@ -229,9 +274,9 @@ class Network():
 
 
 if __name__ == '__main__':
-    network = Network()
+    network = Network(topology=3)
     num_of_edges = len(network.Graph.edges)
-    for i in range(5):
+    for i in range(1000):
         temp_W = np.random.uniform(low=1.0, high=5.0, size=num_of_edges)
         network.update_weights(temp_W)
     # network.run(interval=1, is_plot=True)
