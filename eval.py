@@ -1,4 +1,23 @@
 import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_arr(arr, name):
+    steps = [x for x in range(199999)]
+    arr_np = np.array(arr)
+    arr_np = arr_np.reshape(10, 199999).astype(float)
+    plt.figure(figsize=(10,5))
+    plt.xlabel('Steps')
+    plt.ylabel(name)
+    plt.title(name + " Results averaged over 10 Iterations on Topology 0")
+    avg_arr = np.mean(arr_np, axis=0)
+    print(avg_arr.shape)
+    plt.plot(steps, avg_arr)
+    #for i in range(10):
+    #    plt.plot(steps, arr_np[i, :])
+
+    plt.savefig(name + "_0.jpg")
+    plt.show()
+
 
 steps = []
 reward = []
@@ -12,24 +31,17 @@ with open("topology_0_report.txt", 'r') as f:
         pairs = line.strip().split(',')
         for pair in pairs[1:]:
             key, value = pair.split(':')
-            if key == 'Reward':
+            if key == ' Reward':
                 reward.append(value)
-            elif key == 'Avg Delay':
+            elif key == ' Avg Delay':
                 avg_delay.append(value)
-            elif key == 'Avg E2E Delay':
+            elif key == ' Avg E2E Delay':
                 avg_e2e.append(value)
-            elif key == 'Avg Loss':
+            elif key == ' Avg Loss':
                 avg_loss.append(value)
 
-steps = [x for x in range(len(reward))]
 
-plt.figure(figsize=(10, 5))
-plt.plot(reward, label='Reward', marker='o')
-plt.plot(avg_delay, label='Delay', marker='s')
-plt.plot(avg_e2e, label='End 2 End Delay')
-plt.plot(avg_loss, label='Loss')
-plt.xlabel("Step")
-plt.ylabel('Values')
-plt.savefig('report.jpg')
-plt.show()
-
+plot_arr(reward, 'reward')
+plot_arr(avg_delay, 'avg_delay')
+plot_arr(avg_e2e, 'Avg E2E Delay')
+plot_arr(avg_loss, 'Avg Loss')
