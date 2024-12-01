@@ -18,10 +18,12 @@ class Network():
         
             case 0:
                 self.num_of_switches = 25  # N = number of switches
+                self.M = 150  # Number of flows for a given time ; 
                 self.Graph = nx.grid_2d_graph(5, 5)
                 self.Graph = nx.convert_node_labels_to_integers(self.Graph)  # Convert Nodes into integers
             case 1:
                 self.num_of_switches = 40  # N = number of switches
+                self.M = 150  # Number of flows for a given time ; 
                 self.Graph = nx.gnm_random_graph(self.num_of_switches, 61)
                 while not nx.is_connected(self.Graph):
                     self.Graph = nx.gnm_random_graph(40, 60)
@@ -30,7 +32,8 @@ class Network():
                 self.Graph = nx.gnm_random_graph(self.num_of_switches, 33)
                 while not nx.is_connected(self.Graph):
                     self.Graph = nx.gnm_random_graph(self.num_of_switches, 33)
-
+                self.M = 100  # Number of flows for a given time ;
+        
                 # self.Graph = nx.Graph()
 
                 # for i in range(self.num_of_switches):
@@ -47,6 +50,7 @@ class Network():
                 #     self.Graph.add_edge(node, backbone_nodes[node % len(backbone_nodes)])
             case 3:
                 self.num_of_switches = 20
+                self.M = 10  # Number of flows for a given time ;
                 self.Graph = nx.Graph()
 
                 core_switches = range(4)
@@ -84,8 +88,9 @@ class Network():
         service_rate = global_service_rate // self.num_of_switches
 
         # TODO: Initialize for t=0, and populate at runtime.
-        self.M = 10  # Number of flows for a given time ; TODO: Needs a proper value and changes for every t.
+        
         if self.topology == 3:
+            
             edge_switches = list(range(12, 20))
             core_switches = list(range(4))
             self.f = np.array([(random.choice(edge_switches), random.choice(core_switches)) for _ in range(self.M)],
@@ -189,6 +194,7 @@ class Network():
                 N[i] = K[i] / 2
                 #print("RHO[i] = 1")
                 #print(K[i] / 2)
+        print("done w queue calc")
         return N
 
     def get_P(self, rho, K):

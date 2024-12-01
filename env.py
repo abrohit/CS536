@@ -27,7 +27,9 @@ class NetworkEnv(gym.Env):
         )
 
         self.action_space = gym.spaces.Box(low=w_min, high=w_max, shape=(len(self.network.Graph.edges),1), dtype=np.float32)
+        print("stRTS the longest path")
         self.longest_path = self.longest_path_undirected(self.network.Graph)
+        print("ends lognest path")
 
 
     def _get_obs(self):

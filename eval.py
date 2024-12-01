@@ -3,20 +3,30 @@ import numpy as np
 
 def plot_arr(arr, name):
     steps = [x for x in range(199999)]
-    arr_np = np.array(arr)
-    arr_np = arr_np.reshape(10, 199999).astype(float)
+    window_size = 500
+    moving_average = np.convolve(arr, np.ones(window_size)/window_size, mode='valid')
+    timesteps = np.arange(len(moving_average))
+
+    # arr_np = np.array(arr)
+    # arr_np = arr_np.reshape(10, 199999).astype(float)
     plt.figure(figsize=(10,5))
-    plt.xlabel('Steps')
-    plt.ylabel(name)
-    plt.title(name + " Results averaged over 10 Iterations on Topology 0")
-    avg_arr = np.mean(arr_np, axis=0)
-    print(avg_arr.shape)
-    plt.plot(steps, avg_arr)
+    plt.plot(timesteps, moving_average)
+    plt.title('Moving Average (500 timesteps)')
+    plt.xlabel('Timestep')
+    plt.ylabel('Moving Average')
+    plt.grid(True)
+    plt.show()
+    # plt.xlabel('Steps')
+    # plt.ylabel(name)
+    # plt.title(name + " Results averaged over 10 Iterations on Topology 0")
+    # avg_arr = np.mean(arr_np, axis=0)
+    # print(avg_arr.shape)
+    # plt.plot(steps, avg_arr)
     #for i in range(10):
     #    plt.plot(steps, arr_np[i, :])
 
     plt.savefig(name + "_0.jpg")
-    plt.show()
+    # plt.show()
 
 
 steps = []
@@ -45,3 +55,5 @@ plot_arr(reward, 'reward')
 plot_arr(avg_delay, 'avg_delay')
 plot_arr(avg_e2e, 'Avg E2E Delay')
 plot_arr(avg_loss, 'Avg Loss')
+
+# only 200,000 steps for each file, reshaping code part

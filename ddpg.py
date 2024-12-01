@@ -85,7 +85,7 @@ class DDPGAgent:
         target_q = reward + (1 - done) * self.gamma * target_q
         current_q = self.critic(state, action)
         critic_loss = nn.MSELoss()(current_q, target_q.detach())
-        
+
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
@@ -157,7 +157,8 @@ if __name__ == "__main__":
     w_max = 5
     episode_length = 200000
 
-    # Create environment
+    # Create environme
+
     env = NetworkEnv(topology, alpha, w_min, w_max, episode_length)
 
     # DDPG parameters
@@ -179,4 +180,5 @@ if __name__ == "__main__":
     batch_size = 100
 
     # Start training
+
     train_ddpg(env, agent, num_episodes, max_steps, batch_size, topology)
