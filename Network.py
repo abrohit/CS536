@@ -7,7 +7,7 @@ from matplotlib.animation import FuncAnimation
 
 
 class Network():
-    def __init__(self, topology: int = 0, global_service_rate: int = 3000, global_system_capacity: int = 10000):
+    def __init__(self, topology: int = 0, service_rate: int = 3000, system_capacity: int = 10000):
         """
         topology= 0, 1, 2
         """
@@ -27,6 +27,7 @@ class Network():
                 self.num_of_switches = 40  # N = number of switches
                 self.M = 150  # Number of flows for a given time ; 
                 self.Graph = nx.gnm_random_graph(self.num_of_switches, 61)
+
                 while not nx.is_connected(self.Graph):
                     self.Graph = nx.gnm_random_graph(40, 60)
         #    case 2:
@@ -88,8 +89,8 @@ class Network():
         for edge in self.Graph.edges:
             self.Graph[edge[0]][edge[1]]['weight'] = np.random.uniform(1, 5)
 
-        system_capacity = global_system_capacity // self.num_of_switches
-        service_rate = global_service_rate // self.num_of_switches
+        #system_capacity = global_system_capacity // self.num_of_switches
+        #service_rate = global_service_rate // self.num_of_switches
 
         # TODO: Initialize for t=0, and populate at runtime.
         
@@ -227,6 +228,10 @@ class Network():
         """
         Gets expected loss for each switch.
         """
+        print("EXPECTED LOSS")
+        print(lam)
+        print(P)
+        print(lam * P)
         return lam * P
 
     def update_weights(self, weights, alpha=0.9):
@@ -238,11 +243,13 @@ class Network():
             weights (list or np.array): An array of weights with a length equal to the number of edges.
         """
         if len(weights) != len(self.Graph.edges):
+            print(len(weights))
+            print(len(self.Graph.edges))
             raise ValueError("Length of weights array must match the number of edges in the graph.")
 
         # Update Weights
         for (edge, weight) in zip(self.Graph.edges, weights):
-            self.Graph[edge[0]][edge[1]]['weight'] = weight * alpha
+            self.Graph[edge[0]][edge[1]]['weight'] = weight #* alpha
 
         # Update lambdas for random flows
         for i in range(self.M):
