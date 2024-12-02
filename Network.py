@@ -14,20 +14,23 @@ class Network():
         self.topology = topology
         self.t = 0  # Tracks t
 
-        match self.topology:
+        #match self.topology:
         
-            case 0:
+        #    case 0:
+        if self.topology == 0:
                 self.num_of_switches = 25  # N = number of switches
                 self.M = 150  # Number of flows for a given time ; 
                 self.Graph = nx.grid_2d_graph(5, 5)
                 self.Graph = nx.convert_node_labels_to_integers(self.Graph)  # Convert Nodes into integers
-            case 1:
+        #    case 1:
+        elif self.topology == 1:
                 self.num_of_switches = 40  # N = number of switches
                 self.M = 150  # Number of flows for a given time ; 
                 self.Graph = nx.gnm_random_graph(self.num_of_switches, 61)
                 while not nx.is_connected(self.Graph):
                     self.Graph = nx.gnm_random_graph(40, 60)
-            case 2:
+        #    case 2:
+        elif self.topology == 2: 
                 self.num_of_switches = 19  # N = number of switches
                 self.Graph = nx.gnm_random_graph(self.num_of_switches, 33)
                 while not nx.is_connected(self.Graph):
@@ -48,9 +51,10 @@ class Network():
 
                 # for node in regional_nodes:
                 #     self.Graph.add_edge(node, backbone_nodes[node % len(backbone_nodes)])
-            case 3:
+         #   case 3:
+        elif self.topology == 3: 
                 self.num_of_switches = 20
-                self.M = 10  # Number of flows for a given time ;
+                self.M = 150  # Number of flows for a given time ;
                 self.Graph = nx.Graph()
 
                 core_switches = range(4)
@@ -111,7 +115,10 @@ class Network():
         self.agg_lam = np.zeros(self.num_of_switches)  # Need to keep track of this for all switches.
         for i in range(len(self.f)):
             src, dst = self.f[i]
-            self.agg_lam[dst] += self.lam[i]  # Aggregate flow into destination switch
+            path = self.shortest_path(src, dst)
+            for node in path:
+                self.agg_lam[node] += self.lam[i]
+            #self.agg_lam[dst] += self.lam[i]  # Aggregate flow into destination switch
 
         self.rho = self.agg_lam / self.u  # Traffic Intensity for each switch.
 
@@ -131,14 +138,18 @@ class Network():
         self.fig, self.ax = None, None
     
     def show_network(self):
-        match self.topology:
-            case 0:
+        #match self.topology:
+         #   case 0:
+        if self.topology == 0:
                 self.pos = self.get_custom_grid_coordinates(5, 5)
-            case 1:
+        #    case 1:
+        elif self.topology == 1:
                 self.pos = nx.spring_layout(self.Graph, seed=42)
-            case 2:
+        #    case 2:
+        elif self.topology == 2:
                 self.pos = nx.spring_layout(self.Graph, seed=42)
-            case 3:
+        #    case 3:
+        elif self.topology == 3: 
                 self.pos = nx.spring_layout(self.Graph, seed=42)
         
         plt.ion()
@@ -164,47 +175,32 @@ class Network():
         """
         Gets queue occupation of each switch.
         """
-        print("\n\nQUEUE CALC")
         N = np.zeros(len(rho))
         for i in range(len(rho)):
             if rho[i] < 1 and rho[i] != 0:
-                #print("RHO")
-                #print(rho[i])
-                #print("FIRST TERM")
-                #print((rho[i] / (1 - rho[i])))
-                #print("MINUS")
-                #print("SECOND TERM NUMERATOR")
-                #print(((K[i] + 1) * (rho[i] ** (K[i] + 1))))
-                #print("SECOND TERM DENOMINATOR")
-                #print(((1 - rho[i]) ** (K[i] + 1)))
-
                 N[i] = (rho[i] / (1 - rho[i])) - (((K[i] + 1) * (rho[i] ** (K[i] + 1))) / (1 - (rho[i] ** (K[i] + 1))))
                 #N[i] = (rho[i] / (1 - rho[i])) - (((K[i] + 1) * (rho[i] ** (K[i] + 1))) / ((1 - rho[i]) ** (K[i] + 1)))
                 if np.isnan(N[i]):  # Handles invalid value encountered in scalar divide warning.
                     N[i] = rho[i] / (1 - rho[i])
-                    #print("ISNAN")
-                    #print("NUM")
-                    #print(rho[i])
-                    #print("DENOM")
-                    #print(1 - rho[i])
                 if N[i] > K[i] / 2: # If queue occupation exceeds queue size, cap to queue size
-                    print("QUEUE LIMIT REACHED")
                     N[i] = K[i] / 2
-            if rho[i] == 1:
+            if rho[i] >= 1:
                 N[i] = K[i] / 2
-                #print("RHO[i] = 1")
-                #print(K[i] / 2)
-        print("done w queue calc")
         return N
 
     def get_P(self, rho, K):
         """
         Gets probability array of packets getting lost of size self.num_of_switches.
         """
+        rho = rho.astype(np.float128)
+        K = K.astype(np.float128)
         temp_p = ((1 - rho) * (rho ** K)) / (1 - (rho ** (K + 1)))
         for i in range(len(temp_p)):
             if np.isnan(temp_p[i]):  # Handles invalid value encountered in scalar divide warning.
-                temp_p[i] = 0
+                temp_p[i] = 1 / (K[i] + 1)
+        rho = rho.astype(np.float32)
+        K = K.astype(np.float32)
+        temp_p = temp_p.astype(np.float32)
         return temp_p
 
     def get_expected_delays(self, e_n, lam, P):
@@ -267,7 +263,10 @@ class Network():
         self.agg_lam = np.zeros(self.num_of_switches)  # aggregated arrival rates
         for i in range(len(self.f)):
             src, dst = self.f[i]
-            self.agg_lam[dst] += self.lam[i]
+            path = self.shortest_path(src, dst)
+            for node in path:
+                self.agg_lam[node] += self.lam[i]
+            #self.agg_lam[dst] += self.lam[i]
 
         self.rho = self.agg_lam / self.u  # traffic intensity
         self.e_n = self.get_queue_occupation(self.rho, self.K)  # queue occupation
