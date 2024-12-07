@@ -9,7 +9,7 @@ class NetworkEnv(gym.Env):
     def __init__(self, topology, alpha, w_min, w_max, episode_length):
         self.topology = topology
         self.network = Network(topology)
-        # self.network.show_network()
+        self.network.show_network()
         self.episode_length = episode_length
         self.alpha = alpha
         self.num_switches = self.network.num_of_switches
@@ -51,6 +51,7 @@ class NetworkEnv(gym.Env):
 
         #self.network.reset()
         self.network = Network(self.topology)
+        self.network.show_network()
 
         obs = self._get_obs()
         info = self._get_info()

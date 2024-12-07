@@ -314,11 +314,6 @@ class Network():
         self.ax.set_title(f"Network Topology {self.topology}")
         self.ax.axis('off')
 
-        # Redraw the plot
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
-
-
 if __name__ == '__main__':
     network = Network(topology=3)
     network.show_network()
